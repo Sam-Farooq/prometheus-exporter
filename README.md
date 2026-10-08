@@ -35,12 +35,12 @@ series and every one of them says so:
 $ DATA_SOURCE_NAME='postgres://nobody@127.0.0.1:1/none?sslmode=disable' \
     ./bin/pgexporter -web.runtime-metrics=false &
 $ curl -s localhost:9187/metrics | grep -v '^#' | sort
-pg_exporter_build_info{version="0.13.2"} 1
+pg_exporter_build_info{version="0.16.4"} 1
 pg_exporter_collector_success{collector="bloat"} 0
 pg_exporter_collector_success{collector="connect"} 0
 pg_exporter_collector_success{collector="replication"} 0
 pg_exporter_collector_success{collector="wraparound"} 0
-pg_exporter_scrape_duration_seconds{collector="connect"} 0.002711333
+pg_exporter_scrape_duration_seconds{collector="connect"} 0.002249667
 pg_exporter_scrape_errors_total{collector="bloat"} 0
 pg_exporter_scrape_errors_total{collector="connect"} 1
 pg_exporter_scrape_errors_total{collector="replication"} 0

@@ -7,7 +7,7 @@ pg_database_xid_age_transactions{datname="app"} 4.2e+07
 pg_database_xid_age_transactions{datname="postgres"} 118000
 # HELP pg_exporter_build_info Always 1. The version label is the exporter build serving this endpoint, so a stale binary on one host is visible without logging in.
 # TYPE pg_exporter_build_info gauge
-pg_exporter_build_info{version="0.13.2-test"} 1
+pg_exporter_build_info{version="0.16.4-test"} 1
 # HELP pg_exporter_collector_success 1 when this collector's queries all returned. A 0 here with pg_up at 1 is a permission or a timeout on one view, not an unreachable server.
 # TYPE pg_exporter_collector_success gauge
 pg_exporter_collector_success{collector="bloat"} 1

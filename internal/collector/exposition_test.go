@@ -27,7 +27,7 @@ var update = flag.Bool("update", false, "rewrite the golden exposition files in 
 // view is not readable.
 var errDenied = errors.New("permission denied for view pg_stat_replication")
 
-const testVersion = "0.13.2-test"
+const testVersion = "0.16.4-test"
 
 // goldenNames is every metric the golden files compare, which is everything
 // except the per-collector duration. Wall time is not reproducible and a

@@ -31,7 +31,7 @@ import (
 // -ldflags "-X main.version=$(git describe --tags)". The default is the
 // release this source is, so a go build with no flags still reports something
 // true.
-var version = "0.13.2"
+var version = "0.16.4"
 
 // dsnEnv is the only place a credential enters this process.
 const dsnEnv = "DATA_SOURCE_NAME"
