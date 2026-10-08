@@ -1,0 +1,13 @@
+{
+  "note": "Hand-written by the author, not captured from a server. A server that answers every query with no rows: a fresh instance with no standbys, no slots, no user tables above the filter and nothing to vacuum. The golden file for it is the floor of what the exporter always emits.",
+  "replication": {
+    "in_recovery": false,
+    "standbys": [],
+    "slots": []
+  },
+  "tables": [],
+  "wraparound": {
+    "databases": [],
+    "freeze_max_age": 200000000
+  }
+}

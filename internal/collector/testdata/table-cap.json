@@ -1,0 +1,20 @@
+{
+  "note": "Hand-written by the author, not captured from a server. Six tables above the filter, used with MaxTables set to 2, so the kept set is a top-N by size and pg_table_series_omitted has to report the four that did not make it.",
+  "replication": {
+    "in_recovery": false,
+    "standbys": [],
+    "slots": []
+  },
+  "tables": [
+    {"schema": "public", "table": "t_900m", "dead_rows": 10, "live_rows": 5000, "size_bytes": 943718400, "autovacuum_threshold_rows": 1050, "last_autovacuum": null, "autovacuums": 0},
+    {"schema": "public", "table": "t_800m", "dead_rows": 20, "live_rows": 5000, "size_bytes": 838860800, "autovacuum_threshold_rows": 1050, "last_autovacuum": null, "autovacuums": 0},
+    {"schema": "public", "table": "t_700m", "dead_rows": 30, "live_rows": 5000, "size_bytes": 734003200, "autovacuum_threshold_rows": 1050, "last_autovacuum": null, "autovacuums": 0},
+    {"schema": "public", "table": "t_600m", "dead_rows": 40, "live_rows": 5000, "size_bytes": 629145600, "autovacuum_threshold_rows": 1050, "last_autovacuum": null, "autovacuums": 0},
+    {"schema": "public", "table": "t_500m", "dead_rows": 50, "live_rows": 5000, "size_bytes": 524288000, "autovacuum_threshold_rows": 1050, "last_autovacuum": null, "autovacuums": 0},
+    {"schema": "public", "table": "t_tiny", "dead_rows": 60, "live_rows": 5000, "size_bytes": 4096, "autovacuum_threshold_rows": 1050, "last_autovacuum": null, "autovacuums": 0}
+  ],
+  "wraparound": {
+    "databases": [{"datname": "app", "xid_age": 1000}],
+    "freeze_max_age": 200000000
+  }
+}

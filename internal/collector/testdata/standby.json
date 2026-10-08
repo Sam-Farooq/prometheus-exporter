@@ -1,0 +1,22 @@
+{
+  "note": "Hand-written by the author, not captured from a server. A standby with nothing replicating from it, which is the case where the replication metrics are all legitimately empty and the state counts still have to be present at zero.",
+  "replication": {
+    "in_recovery": true,
+    "standbys": [],
+    "slots": []
+  },
+  "tables": [
+    {
+      "schema": "public", "table": "cache_entries",
+      "dead_rows": 900, "live_rows": 500000, "size_bytes": 134217728,
+      "autovacuum_threshold_rows": 100050,
+      "last_autovacuum": "2026-10-08T09:30:00Z", "autovacuums": 5
+    }
+  ],
+  "wraparound": {
+    "databases": [
+      {"datname": "app", "xid_age": 9000000}
+    ],
+    "freeze_max_age": 200000000
+  }
+}

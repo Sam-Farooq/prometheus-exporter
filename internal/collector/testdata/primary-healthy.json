@@ -1,0 +1,47 @@
+{
+  "note": "Hand-written by the author, not captured from a server. A primary with two distinctly named standbys, one physical and one logical slot, three tables above the 8 MiB filter and one below it, and two connectable databases. The one small table is here to put the size filter in the golden file.",
+  "replication": {
+    "in_recovery": false,
+    "standbys": [
+      {"application_name": "replica-a", "state": "streaming", "lag_bytes": 8192, "replay_lag_seconds": 0.021},
+      {"application_name": "replica-b", "state": "streaming", "lag_bytes": 16384, "replay_lag_seconds": 0.044}
+    ],
+    "slots": [
+      {"slot_name": "replica_a", "slot_type": "physical", "active": true, "retained_wal_bytes": 8192},
+      {"slot_name": "cdc_orders", "slot_type": "logical", "active": true, "retained_wal_bytes": 1048576}
+    ]
+  },
+  "tables": [
+    {
+      "schema": "public", "table": "order_items",
+      "dead_rows": 240000, "live_rows": 18000000, "size_bytes": 12884901888,
+      "autovacuum_threshold_rows": 3600050,
+      "last_autovacuum": "2026-10-07T03:58:00Z", "autovacuums": 63
+    },
+    {
+      "schema": "public", "table": "orders",
+      "dead_rows": 12000, "live_rows": 4000000, "size_bytes": 3221225472,
+      "autovacuum_threshold_rows": 800050,
+      "last_autovacuum": "2026-10-07T04:12:00Z", "autovacuums": 41
+    },
+    {
+      "schema": "billing", "table": "invoices",
+      "dead_rows": 1200, "live_rows": 850000, "size_bytes": 536870912,
+      "autovacuum_threshold_rows": 170050,
+      "last_autovacuum": "2026-10-08T01:05:00Z", "autovacuums": 12
+    },
+    {
+      "schema": "public", "table": "lookup_currency",
+      "dead_rows": 0, "live_rows": 180, "size_bytes": 65536,
+      "autovacuum_threshold_rows": 86,
+      "last_autovacuum": null, "autovacuums": 0
+    }
+  ],
+  "wraparound": {
+    "databases": [
+      {"datname": "app", "xid_age": 42000000},
+      {"datname": "postgres", "xid_age": 118000}
+    ],
+    "freeze_max_age": 200000000
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "note": "Hand-written by the author, not captured from a server. Four things are wrong at once: two standbys share the default application_name, one standby has never reported a replay time, both slots are inactive while holding 48 GiB of WAL between them, and the largest table has never been autovacuumed. The duplicate application_name is the case that used to make the whole endpoint return 500.",
+  "replication": {
+    "in_recovery": false,
+    "standbys": [
+      {"application_name": "walreceiver", "state": "streaming", "lag_bytes": 1073741824, "replay_lag_seconds": null},
+      {"application_name": "walreceiver", "state": "streaming", "lag_bytes": 2147483648, "replay_lag_seconds": 11.5},
+      {"application_name": "replica-c", "state": "catchup", "lag_bytes": 536870912, "replay_lag_seconds": null}
+    ],
+    "slots": [
+      {"slot_name": "cdc_orders", "slot_type": "logical", "active": false, "retained_wal_bytes": 42949672960},
+      {"slot_name": "old_replica", "slot_type": "physical", "active": false, "retained_wal_bytes": 8589934592}
+    ]
+  },
+  "tables": [
+    {
+      "schema": "public", "table": "events",
+      "dead_rows": 41000000, "live_rows": 95000000, "size_bytes": 214748364800,
+      "autovacuum_threshold_rows": 19000050,
+      "last_autovacuum": null, "autovacuums": 0
+    },
+    {
+      "schema": "public", "table": "sessions",
+      "dead_rows": 7500000, "live_rows": 2000000, "size_bytes": 32212254720,
+      "autovacuum_threshold_rows": 400050,
+      "last_autovacuum": "2026-09-14T22:40:00Z", "autovacuums": 2
+    }
+  ],
+  "wraparound": {
+    "databases": [
+      {"datname": "app", "xid_age": 178000000},
+      {"datname": "postgres", "xid_age": 240000}
+    ],
+    "freeze_max_age": 200000000
+  }
+}
