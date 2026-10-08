@@ -1,0 +1,23 @@
+# build output
+/bin/
+/dist/
+pgexporter
+*.test
+
+# go tooling caches and coverage
+/.gocache/
+/.golangci-cache/
+coverage.out
+coverage.html
+*.prof
+*.pprof
+
+# local config that would carry a DSN
+.env
+.envrc
+
+# editor and os
+.DS_Store
+.idea/
+.vscode/
+*.swp
