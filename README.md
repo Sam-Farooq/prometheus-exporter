@@ -1,8 +1,8 @@
 # prometheus-exporter
 
 A Prometheus exporter for PostgreSQL replication, table bloat and transaction
-id age. One Go binary, two direct dependencies, and no database needed to run
-its tests.
+id age. One Go binary, two dependencies in the build, and no database needed to
+run its tests.
 
 ```
 cmd/pgexporter/                flags, three endpoints, graceful stop
@@ -352,14 +352,20 @@ repo is about, and a query with no context cannot be timed out.
 
 ## Dependencies
 
-Two direct, and both are load-bearing.
+Two that the binary links, and two more that only the tests import.
 
-`github.com/prometheus/client_golang` is the registry, the exposition encoder,
-`promhttp` and `testutil`. `github.com/jackc/pgx/v5` appears once, as a blank
-import in `internal/postgres/sqlsource.go`, to register a `database/sql`
-driver. Every query goes through `database/sql`, so replacing the driver is
-that one line: `lib/pq` is in maintenance mode and pgx is the one being worked
-on.
+`github.com/prometheus/client_golang` is the registry, `promhttp` and
+`testutil`. `github.com/jackc/pgx/v5` appears once, as a blank import in
+`internal/postgres/sqlsource.go`, to register a `database/sql` driver. Every
+query goes through `database/sql`, so replacing the driver is that one line:
+`lib/pq` is in maintenance mode and pgx is the one being worked on.
+
+`client_model` and `common/expfmt` are direct requirements in `go.mod` because
+the tests import them: `expfmt` to encode a golden file and to parse one back,
+`client_model` to read the metric type off a gathered family. Both already
+arrive underneath client_golang, so neither adds anything to the build; they
+are listed because `go mod tidy` is right that this module imports them and CI
+fails on a `go.mod` that says otherwise.
 
 No testify. The assertions here are string containment over exposition text and
 exact comparison against golden files, and a table of cases with a `want` field
@@ -384,6 +390,15 @@ which is why the helpers in `collector_test.go` print the line they looked for.
   `autovacuum_vacuum_scale_factor`. A table carrying its own
   `autovacuum_vacuum_scale_factor` in `reloptions` has a different real
   threshold, and this reports the server's.
+- **The table and vacuum metrics cover one database.** `pg_stat_user_tables`
+  is per-database, so the exporter reports the tables in whichever database
+  the DSN connects to. The wraparound metrics are the exception:
+  `pg_database` is shared, so `pg_database_xid_age_transactions` covers every
+  connectable database from one connection. A server holding several
+  application databases needs one exporter process per database, which is a
+  process and a scrape target each, and is still better than an exporter that
+  reconnects around a loop and reports a partial scrape when one of them
+  refuses.
 - **`pg_stat_user_tables` is an estimate, not a count.** Dead and live rows
   come from the statistics collector, and both read zero immediately after a
   statistics reset on a table that is full of them.
