@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strconv"
 	"text/tabwriter"
 
 	"github.com/Sam-Farooq/prometheus-exporter/internal/postgres"
@@ -31,7 +32,16 @@ var DefaultAssumptions = Assumptions{
 	Databases: 16,
 }
 
-// BudgetLine is one metric's worst-case series count.
+// Unbounded is the Series value for a metric whose count nothing in this
+// exporter limits.
+//
+// -collector.bloat.max-tables 0 means no LIMIT in the query, so the table
+// series count is whatever the server happens to hold. Reporting that as zero
+// was worse than reporting nothing: the budget printed a ceiling of 137 for
+// the configuration with no ceiling at all.
+const Unbounded = -1
+
+// BudgetLine is one metric's worst-case series count, or Unbounded.
 type BudgetLine struct {
 	Metric string
 	Series int
@@ -49,6 +59,9 @@ type BudgetLine struct {
 func SeriesBudget(a Assumptions) []BudgetLine {
 	tables := a.Limits.MaxTables
 	perTable := func(metric string) BudgetLine {
+		if tables <= 0 {
+			return BudgetLine{metric, Unbounded, "every table on the server"}
+		}
 		return BudgetLine{metric, tables, fmt.Sprintf("%d tables", tables)}
 	}
 	perStandby := func(metric string) BudgetLine {
@@ -83,22 +96,40 @@ func SeriesBudget(a Assumptions) []BudgetLine {
 		{name("exporter", "build_info"), 1, "one build"},
 		{name("exporter", "scrapes_total"), 1, "no labels"},
 	}
+	// Unbounded sorts first, not last, which is where a plain descending
+	// comparison on -1 would put it.
 	sort.SliceStable(lines, func(i, j int) bool {
-		if lines[i].Series != lines[j].Series {
-			return lines[i].Series > lines[j].Series
+		a, b := lines[i], lines[j]
+		if (a.Series == Unbounded) != (b.Series == Unbounded) {
+			return a.Series == Unbounded
 		}
-		return lines[i].Metric < lines[j].Metric
+		if a.Series != b.Series {
+			return a.Series > b.Series
+		}
+		return a.Metric < b.Metric
 	})
 	return lines
 }
 
-// TotalSeries sums a budget.
+// TotalSeries sums a budget, or returns Unbounded if any line is unbounded.
+// A sum that silently drops the unbounded term is a smaller number than the
+// truth, which is the direction that gets somebody hurt.
 func TotalSeries(lines []BudgetLine) int {
 	total := 0
 	for _, l := range lines {
+		if l.Series == Unbounded {
+			return Unbounded
+		}
 		total += l.Series
 	}
 	return total
+}
+
+func seriesText(n int) string {
+	if n == Unbounded {
+		return "unbounded"
+	}
+	return strconv.Itoa(n)
 }
 
 // WriteBudget prints the budget as a table. This is what -series-budget shows,
@@ -110,16 +141,30 @@ func WriteBudget(w io.Writer, a Assumptions) error {
 		return err
 	}
 	for _, l := range lines {
-		if _, err := fmt.Fprintf(tw, "%s\t%d\t%s\n", l.Metric, l.Series, l.Basis); err != nil {
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\n", l.Metric, seriesText(l.Series), l.Basis); err != nil {
 			return err
 		}
 	}
-	if _, err := fmt.Fprintf(tw, "\nworst case\t%d\tat %d tables, %d standbys, %d slots, %d databases\n",
-		TotalSeries(lines), a.Limits.MaxTables, a.Standbys, a.Slots, a.Databases); err != nil {
+
+	total := TotalSeries(lines)
+	tableCap := fmt.Sprintf("%d tables", a.Limits.MaxTables)
+	if a.Limits.MaxTables <= 0 {
+		tableCap = "no table cap"
+	}
+	if _, err := fmt.Fprintf(tw, "\nworst case\t%s\tat %s, %d standbys, %d slots, %d databases\n",
+		seriesText(total), tableCap, a.Standbys, a.Slots, a.Databases); err != nil {
 		return err
 	}
+
+	if total == Unbounded {
+		_, err := fmt.Fprintf(tw, "table metrics\tunbounded\tset -collector.bloat.max-tables to get a ceiling\n")
+		if err != nil {
+			return err
+		}
+		return tw.Flush()
+	}
 	if _, err := fmt.Fprintf(tw, "table metrics\t%d\t%.0f%% of the total\n",
-		6*a.Limits.MaxTables, 100*float64(6*a.Limits.MaxTables)/float64(TotalSeries(lines))); err != nil {
+		6*a.Limits.MaxTables, 100*float64(6*a.Limits.MaxTables)/float64(total)); err != nil {
 		return err
 	}
 	return tw.Flush()

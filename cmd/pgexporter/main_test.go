@@ -58,6 +58,24 @@ func TestSeriesBudgetFollowsTheFlags(t *testing.T) {
 	}
 }
 
+func TestSeriesBudgetSaysSoWhenThereIsNoCeiling(t *testing.T) {
+	var out, errOut bytes.Buffer
+	if err := run([]string{"-series-budget", "-collector.bloat.max-tables", "0"}, &out, &errOut); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	got := out.String()
+	// 0 means no LIMIT in the query. Printing 137 for that configuration
+	// was a ceiling for the one case that has none.
+	for _, want := range []string{"unbounded", "no table cap"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("output is missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "137") {
+		t.Errorf("a ceiling was printed for an uncapped run:\n%s", got)
+	}
+}
+
 func TestFlagValidation(t *testing.T) {
 	cases := []struct {
 		name string

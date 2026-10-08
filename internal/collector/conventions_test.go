@@ -193,9 +193,19 @@ func TestSeriesBudgetArithmetic(t *testing.T) {
 			total: 3137 - 6*450,
 		},
 		{
-			name:  "no tables at all leaves the fixed cost",
-			a:     Assumptions{Limits: postgres.Limits{MaxTables: 0}, Standbys: 0, Slots: 0, Databases: 0},
-			total: 15 + 6 + 3 + 1,
+			// The fixed cost: six state counts, four per-collector
+			// series three times over, and the handful with no labels.
+			name:  "one table, no standbys, no slots, no databases",
+			a:     Assumptions{Limits: postgres.Limits{MaxTables: 1}, Standbys: 0, Slots: 0, Databases: 0},
+			total: 25 + 6,
+		},
+		{
+			// 0 means no LIMIT in the query, so there is no ceiling to
+			// print. This used to come out as 137, which is a ceiling
+			// for the configuration that has none.
+			name:  "no table cap has no ceiling",
+			a:     Assumptions{Limits: postgres.Limits{MaxTables: 0}, Standbys: 16, Slots: 32, Databases: 16},
+			total: Unbounded,
 		},
 	}
 	for _, tc := range cases {
@@ -306,5 +316,43 @@ func TestHelpOfReadsBackWhatWentIn(t *testing.T) {
 				t.Errorf("fqNameOf() = %q", got)
 			}
 		})
+	}
+}
+
+func TestUnboundedBudgetSortsFirstAndSaysSo(t *testing.T) {
+	lines := SeriesBudget(Assumptions{Limits: postgres.Limits{MaxTables: 0}, Standbys: 4, Slots: 4, Databases: 4})
+
+	// An unbounded line at -1 would sort to the bottom of a descending
+	// comparison, which is where a reader looks last.
+	unbounded := 0
+	for i, l := range lines {
+		if l.Series != Unbounded {
+			continue
+		}
+		unbounded++
+		if i >= 6 {
+			t.Errorf("%s is unbounded and sorted to position %d", l.Metric, i)
+		}
+		if l.Basis != "every table on the server" {
+			t.Errorf("%s basis = %q", l.Metric, l.Basis)
+		}
+	}
+	if unbounded != 6 {
+		t.Errorf("%d unbounded lines, want the six table metrics", unbounded)
+	}
+
+	var buf strings.Builder
+	if err := WriteBudget(&buf, Assumptions{Limits: postgres.Limits{MaxTables: 0}}); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	for _, want := range []string{"unbounded", "no table cap", "set -collector.bloat.max-tables to get a ceiling"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("WriteBudget output is missing %q:\n%s", want, out)
+		}
+	}
+	// And it must not print a number that reads as a ceiling.
+	if strings.Contains(out, "worst case     137") {
+		t.Error("the budget printed a ceiling for a configuration that has none")
 	}
 }
