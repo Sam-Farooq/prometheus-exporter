@@ -1,0 +1,59 @@
+{
+  "note": "Hand-written by the author, not captured from a server. Identifiers that the text exposition format has to escape: a quoted table name holding a double quote, a backslash and a newline, all three legal in a PostgreSQL quoted identifier, and an application_name with a quote and a non-ASCII character in it. Slot names are not here because PostgreSQL restricts those to [a-z0-9_].",
+  "replication": {
+    "in_recovery": false,
+    "standbys": [
+      {
+        "application_name": "réplica-eu-ouest",
+        "state": "streaming",
+        "lag_bytes": 32768,
+        "replay_lag_seconds": 0.08
+      },
+      {
+        "application_name": "app=\"analytics\"",
+        "state": "streaming",
+        "lag_bytes": 65536,
+        "replay_lag_seconds": null
+      }
+    ],
+    "slots": [
+      {
+        "slot_name": "replica_eu_ouest",
+        "slot_type": "physical",
+        "active": true,
+        "retained_wal_bytes": 32768
+      }
+    ]
+  },
+  "tables": [
+    {
+      "schema": "public",
+      "table": "he said \"no\"\\ and\nthen stopped",
+      "dead_rows": 2500,
+      "live_rows": 1000000,
+      "size_bytes": 1073741824,
+      "autovacuum_threshold_rows": 200050,
+      "last_autovacuum": "2026-10-08T11:15:00Z",
+      "autovacuums": 7
+    },
+    {
+      "schema": "référence",
+      "table": "devises",
+      "dead_rows": 0,
+      "live_rows": 300,
+      "size_bytes": 16777216,
+      "autovacuum_threshold_rows": 110,
+      "last_autovacuum": null,
+      "autovacuums": 0
+    }
+  ],
+  "wraparound": {
+    "databases": [
+      {
+        "datname": "app-eu",
+        "xid_age": 3100000
+      }
+    ],
+    "freeze_max_age": 200000000
+  }
+}

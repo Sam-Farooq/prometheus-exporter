@@ -10,6 +10,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	"github.com/prometheus/common/expfmt"
 
 	"github.com/Sam-Farooq/prometheus-exporter/internal/postgres"
 )
@@ -364,7 +365,7 @@ func TestZeroTimeoutFallsBackToTheDefault(t *testing.T) {
 func TestDescribeAndCollectAgree(t *testing.T) {
 	// A pedantic registry rejects a collected metric whose descriptor was
 	// not described. Gathering every fixture through one is the check.
-	for _, fixture := range []string{"primary-healthy.json", "primary-degraded.json", "standby.json", "empty.json", "table-cap.json"} {
+	for _, fixture := range []string{"primary-healthy.json", "primary-degraded.json", "standby.json", "empty.json", "table-cap.json", "odd-identifiers.json"} {
 		t.Run(fixture, func(t *testing.T) {
 			fake := &postgres.Fake{Data: load(t, fixture)}
 			e := newExporter(t, fake, postgres.DefaultLimits)
@@ -424,7 +425,7 @@ func TestExpositionPassesPromlint(t *testing.T) {
 	// The same rules promtool applies. They catch a counter without _total,
 	// a missing help string and a unit abbreviation, which is most of what
 	// a hand-written metric name gets wrong.
-	for _, fixture := range []string{"primary-healthy.json", "primary-degraded.json", "empty.json"} {
+	for _, fixture := range []string{"primary-healthy.json", "primary-degraded.json", "empty.json", "odd-identifiers.json"} {
 		t.Run(fixture, func(t *testing.T) {
 			fake := &postgres.Fake{Data: load(t, fixture)}
 			e := newExporter(t, fake, postgres.DefaultLimits)
@@ -436,5 +437,70 @@ func TestExpositionPassesPromlint(t *testing.T) {
 				t.Errorf("%s: %s", p.Metric, p.Text)
 			}
 		})
+	}
+}
+
+// TestOddIdentifiersSurviveTheExpositionFormat parses the rendered output back
+// and compares the label values with what went in.
+//
+// A table name may hold a double quote, a backslash and a newline: all three
+// are legal inside a PostgreSQL quoted identifier, and all three have to be
+// escaped in the text exposition format. Anything that formatted a line by
+// hand would emit output Prometheus cannot parse, and the target would go
+// down over a table somebody named badly. client_golang escapes them; this is
+// the test that says so, and it is the round trip rather than the rendering
+// that proves it.
+func TestOddIdentifiersSurviveTheExpositionFormat(t *testing.T) {
+	fake := &postgres.Fake{Data: load(t, "odd-identifiers.json")}
+	e := newExporter(t, fake, postgres.DefaultLimits)
+	out := render(t, e)
+
+	var parser expfmt.TextParser
+	families, err := parser.TextToMetricFamilies(strings.NewReader(out))
+	if err != nil {
+		t.Fatalf("the exporter rendered output that will not parse: %v", err)
+	}
+
+	got := map[string]bool{}
+	mf, ok := families["pg_table_dead_rows"]
+	if !ok {
+		t.Fatal("pg_table_dead_rows is missing from the parsed output")
+	}
+	for _, m := range mf.GetMetric() {
+		schema, table := "", ""
+		for _, l := range m.GetLabel() {
+			switch l.GetName() {
+			case "schema":
+				schema = l.GetValue()
+			case "table":
+				table = l.GetValue()
+			}
+		}
+		got[schema+"\x00"+table] = true
+	}
+
+	for _, want := range [][2]string{
+		{"public", "he said \"no\"\\ and\nthen stopped"},
+		{"référence", "devises"},
+	} {
+		if !got[want[0]+"\x00"+want[1]] {
+			t.Errorf("label values did not round-trip: schema=%q table=%q", want[0], want[1])
+		}
+	}
+
+	// The non-ASCII and the quote in an application_name too, which comes
+	// from a standby's connection string and is not an identifier at all.
+	names := map[string]bool{}
+	for _, m := range families["pg_replication_standby_lag_bytes"].GetMetric() {
+		for _, l := range m.GetLabel() {
+			if l.GetName() == "application_name" {
+				names[l.GetValue()] = true
+			}
+		}
+	}
+	for _, want := range []string{"réplica-eu-ouest", `app="analytics"`} {
+		if !names[want] {
+			t.Errorf("application_name %q did not round-trip, got %v", want, names)
+		}
 	}
 }

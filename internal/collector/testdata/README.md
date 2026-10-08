@@ -4,7 +4,7 @@ Two kinds of file, and both are written by hand.
 
 ## The `.json` fixtures
 
-Five server states, decoded into `postgres.Fixture` and served by
+Six server states, decoded into `postgres.Fixture` and served by
 `postgres.Fake`. **None of them was captured from a PostgreSQL server,
 recorded from a client, or dumped by a running exporter.** Every number was
 chosen to put one decision under test, and each file says so in its `note`
@@ -18,6 +18,7 @@ saying it, so the claim cannot quietly stop being true.
 | `standby.json` | `pg_is_in_recovery()` true, nothing replicating from it. The case where every replication metric is legitimately empty and the state counts still have to be present at zero. |
 | `empty.json` | Every query returns no rows. The golden file for it is the floor of what the exporter always emits. |
 | `table-cap.json` | Six tables, used with `MaxTables` set to 2, so `pg_table_series_omitted` has something to report. |
+| `odd-identifiers.json` | A table name holding a double quote, a backslash and a newline, all three legal in a PostgreSQL quoted identifier, and an `application_name` with a quote and a non-ASCII character. `TestOddIdentifiersSurviveTheExpositionFormat` parses the rendering back and compares. Slot names are not in it: PostgreSQL restricts those to `[a-z0-9_]`. |
 
 The autovacuum thresholds in every fixture follow
 `autovacuum_vacuum_threshold + autovacuum_vacuum_scale_factor * live_rows` at
@@ -32,7 +33,7 @@ against nothing.
 
 ## The `.prom` golden files
 
-Rendered exposition text, one file per case in `TestExposition`. Regenerate
+Rendered exposition text, eight files, one per case in `TestExposition`. Regenerate
 with:
 
 ```bash

@@ -7,7 +7,7 @@ its tests.
 ```
 cmd/pgexporter/                flags, three endpoints, graceful stop
 internal/collector/            prometheus.Collector, 20 descriptors, the series budget
-internal/collector/testdata/   five hand-written fixtures, seven golden exposition files
+internal/collector/testdata/   six hand-written fixtures, eight golden exposition files
 internal/postgres/             row shapes, four SQL statements, one database/sql source, the fake
 ```
 
@@ -111,7 +111,7 @@ it is deterministic and the whole case runs in 20 milliseconds.
 `Describe` walks one list and `Collect` reads from the same one, so the two
 cannot hold different opinions about which metrics exist. The check is a
 `prometheus.NewPedanticRegistry`, which rejects a collected metric whose
-descriptor was never described, run over all five fixtures.
+descriptor was never described, run over all six fixtures.
 
 ## The duplicate that returned a 500
 
@@ -310,10 +310,10 @@ go vet ./...
 make lint
 ```
 
-`go test ./... -v` reports 97 passing cases, 51 top-level tests and 46
-subtests, across 1,517 lines of test against 1,579 lines of everything else.
+`go test ./... -v` reports 104 passing cases, 54 top-level tests and 50
+subtests, across 1,655 lines of test against 1,624 lines of everything else.
 Not one of them opens a socket, reads a credential or starts a container. The
-database is behind `postgres.Source`, and `postgres.Fake` serves one of five
+database is behind `postgres.Source`, and `postgres.Fake` serves one of six
 JSON fixtures.
 
 The fixtures are written by hand. **None of them was captured from a PostgreSQL
@@ -326,7 +326,7 @@ autovacuum threshold follows from its own live row count at the PostgreSQL
 defaults of 50 and 0.2, because a fixture that fails that describes a server
 state which cannot exist.
 
-Seven golden files hold rendered exposition text, because that text is the
+Eight golden files hold rendered exposition text, because that text is the
 contract. A test asserting on a Go struct passes while the output carries the
 wrong metric name or a counter typed as a gauge, and the output is the only
 thing Prometheus parses. `go test ./internal/collector/ -update` rewrites them
@@ -335,6 +335,14 @@ and CI fails on a diff.
 `testutil.CollectAndLint` runs the same rules `promtool check metrics` applies.
 That is what found the gauge with a `_total` suffix, five `# TYPE` lines at a
 time.
+
+One fixture is there for the escaping alone. A table name may hold a double
+quote, a backslash and a newline, all three legal inside a PostgreSQL quoted
+identifier, and all three have to be escaped in the exposition format.
+`TestOddIdentifiersSurviveTheExpositionFormat` parses the rendering back with
+`expfmt.TextParser` and compares the label values with what went in, because
+anything that formatted a line by hand would emit output Prometheus cannot
+parse and the target would go down over a table somebody named badly.
 
 `make lint` runs golangci-lint 1.61.0, pinned by tag in both the Makefile and
 CI, with 15 linters on top of the defaults. The ones that earn their place here

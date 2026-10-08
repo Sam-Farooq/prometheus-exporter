@@ -241,8 +241,8 @@ func TestFixturesDeclareTheirOrigin(t *testing.T) {
 			}
 		}
 	}
-	if seen < 5 {
-		t.Errorf("found %d fixtures, expected at least 5", seen)
+	if seen < 6 {
+		t.Errorf("found %d fixtures, expected at least 6", seen)
 	}
 }
 

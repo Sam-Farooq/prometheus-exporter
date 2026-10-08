@@ -116,6 +116,12 @@ func TestExposition(t *testing.T) {
 			limits:  postgres.Limits{MinTableBytes: 8 << 20, MaxTables: 2},
 		},
 		{
+			name:    "identifiers the exposition format has to escape",
+			fixture: "odd-identifiers.json",
+			golden:  "odd-identifiers.prom",
+			limits:  postgres.DefaultLimits,
+		},
+		{
 			name:    "the server does not answer",
 			fixture: "primary-healthy.json",
 			golden:  "down.prom",
