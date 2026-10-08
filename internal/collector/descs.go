@@ -190,7 +190,7 @@ func newDescs() descs {
 }
 
 // all returns every descriptor, which is what Describe sends.
-func (d descs) all() []*prometheus.Desc {
+func (d *descs) all() []*prometheus.Desc {
 	return []*prometheus.Desc{
 		d.up, d.buildInfo,
 		d.collectorSuccess, d.collectorDuration,

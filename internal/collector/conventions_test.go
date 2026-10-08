@@ -102,7 +102,8 @@ func TestLabelsStayInsideTheBudget(t *testing.T) {
 	}
 
 	labelPattern := regexp.MustCompile(`variableLabels: \{([^}]*)\}`)
-	for _, d := range newDescs().all() {
+	descriptors := newDescs()
+	for _, d := range descriptors.all() {
 		m := labelPattern.FindStringSubmatch(d.String())
 		if len(m) != 2 || strings.TrimSpace(m[1]) == "" {
 			continue
@@ -125,7 +126,8 @@ func TestLabelsStayInsideTheBudget(t *testing.T) {
 }
 
 func TestHelpStringsSayWhatToConclude(t *testing.T) {
-	for _, d := range newDescs().all() {
+	descriptors := newDescs()
+	for _, d := range descriptors.all() {
 		n := fqNameOf(d)
 		help := helpOf(d)
 		switch {

@@ -1,0 +1,73 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  # One place for the toolchain, and it matches the toolchain line in go.mod.
+  GO_VERSION: "1.23.12"
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+
+      - name: go.mod is tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: build
+        run: go build ./...
+
+      # No service container. Every test in this repo reads a fake, so there
+      # is nothing to wait for and nothing to be flaky about.
+      - name: test
+        run: go test ./... -race -count=1
+
+      - name: the golden files are current
+        run: |
+          go test ./internal/collector/ -update -count=1
+          git diff --exit-code -- internal/collector/testdata
+
+      - name: the series budget is the figure in the README
+        run: |
+          go run ./cmd/pgexporter -series-budget | tee /tmp/budget.txt
+          grep -q "worst case" /tmp/budget.txt
+          grep -qF "$(grep -oE 'worst case +[0-9]+' /tmp/budget.txt | grep -oE '[0-9]+')" README.md
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          check-latest: false
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          # Pinned by tag. A linter set that moves on its own breaks a build
+          # nobody changed.
+          version: v1.61.0
+          args: --timeout 5m

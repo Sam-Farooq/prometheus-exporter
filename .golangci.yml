@@ -1,0 +1,54 @@
+# golangci-lint is pinned to v1.61.0 in .github/workflows/ci.yml. A linter set
+# that moves on its own breaks a build nobody changed.
+run:
+  timeout: 3m
+  tests: true
+
+linters:
+  enable:
+    # errcheck, govet, ineffassign, staticcheck and unused are on by
+    # default. These are the ones worth adding.
+    - bodyclose     # a response body left open is a leaked connection
+    - copyloopvar   # Go 1.22 made the loop variable per-iteration; the old workaround is now noise
+    - errorlint     # == on an error misses a wrapped one, which is how an errors.Is check goes quiet
+    - gocritic
+    - gofmt
+    - goimports
+    - misspell
+    - nilerr        # returning nil after checking an error is the bug this repo is about
+    - noctx         # an HTTP or SQL call with no context cannot be timed out
+    - predeclared   # shadowing cap, len or max reads as the builtin
+    - revive
+    - sqlclosecheck # rows left unclosed hold a pool connection until the GC runs
+    - unconvert
+    - unparam
+    - usestdlibvars
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  goimports:
+    local-prefixes: github.com/Sam-Farooq/prometheus-exporter
+  misspell:
+    locale: UK
+  revive:
+    rules:
+      - name: exported
+        arguments:
+          - disableStutteringCheck
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - performance
+      - style
+    disabled-checks:
+      # Both want the opposite of what the code does on purpose: the error
+      # paths here are written out one at a time so each can carry its own
+      # sentence.
+      - ifElseChain
+      - singleCaseSwitch
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  exclude-use-default: false
