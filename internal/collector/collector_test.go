@@ -390,3 +390,51 @@ func TestDescribeAndCollectAgree(t *testing.T) {
 		})
 	}
 }
+
+// TestStaleSeriesDoNotSurviveAScrape is the test that changed the
+// implementation.
+//
+// A table dropped from the database, or pushed out of the top-N by a table
+// that grew, must stop being reported. Held between scrapes in a GaugeVec it
+// does not: the last value it had is re-exported on every scrape afterwards,
+// for as long as the process runs, and a dashboard shows a table with 7.5
+// million dead rows that no longer exists.
+func TestStaleSeriesDoNotSurviveAScrape(t *testing.T) {
+	fake := &postgres.Fake{Data: load(t, "primary-healthy.json")}
+	e := newExporter(t, fake, postgres.DefaultLimits)
+
+	first := render(t, e)
+	mustHave(t, first, `pg_table_dead_rows{schema="billing",table="invoices"} 1200`)
+
+	// billing.invoices is dropped between scrapes.
+	kept := make([]postgres.Table, 0, len(fake.Data.Tables))
+	for _, tb := range fake.Data.Tables {
+		if tb.Schema != "billing" {
+			kept = append(kept, tb)
+		}
+	}
+	fake.Data.Tables = kept
+
+	second := render(t, e)
+	mustNotHave(t, second, `table="invoices"`)
+	mustHave(t, second, `pg_table_dead_rows{schema="public",table="orders"} 12000`)
+}
+
+func TestExpositionPassesPromlint(t *testing.T) {
+	// The same rules promtool applies. They catch a counter without _total,
+	// a missing help string and a unit abbreviation, which is most of what
+	// a hand-written metric name gets wrong.
+	for _, fixture := range []string{"primary-healthy.json", "primary-degraded.json", "empty.json"} {
+		t.Run(fixture, func(t *testing.T) {
+			fake := &postgres.Fake{Data: load(t, fixture)}
+			e := newExporter(t, fake, postgres.DefaultLimits)
+			problems, err := testutil.CollectAndLint(e)
+			if err != nil {
+				t.Fatalf("lint: %v", err)
+			}
+			for _, p := range problems {
+				t.Errorf("%s: %s", p.Metric, p.Text)
+			}
+		})
+	}
+}

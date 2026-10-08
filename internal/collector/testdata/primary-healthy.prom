@@ -59,7 +59,7 @@ pg_table_autovacuum_threshold_rows{schema="billing",table="invoices"} 170050
 pg_table_autovacuum_threshold_rows{schema="public",table="order_items"} 3.60005e+06
 pg_table_autovacuum_threshold_rows{schema="public",table="orders"} 800050
 # HELP pg_table_autovacuums_total Autovacuums of this table since the last statistics reset. A rate of zero on a table above its threshold means autovacuum is not reaching it.
-# TYPE pg_table_autovacuums_total gauge
+# TYPE pg_table_autovacuums_total counter
 pg_table_autovacuums_total{schema="billing",table="invoices"} 12
 pg_table_autovacuums_total{schema="public",table="order_items"} 63
 pg_table_autovacuums_total{schema="public",table="orders"} 41

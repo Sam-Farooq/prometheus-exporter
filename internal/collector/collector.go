@@ -54,19 +54,21 @@ type Exporter struct {
 
 	d descs
 
-	// The only state that survives a scrape, and both are counters. A
-	// counter rebuilt per scrape resets to zero on every scrape, which
-	// makes rate() over it read as a flat line at zero.
+	// The only state that survives a scrape, and both are counters.
+	//
+	// Nothing else may live here. A gauge held on the struct keeps the last
+	// value of every label set it has ever seen, and a table that was
+	// dropped two weeks ago keeps reporting the dead row count it had when
+	// it went. Every data metric is built fresh per scrape with
+	// MustNewConstMetric, which makes a series that stops being observed
+	// stop being reported, by construction rather than by remembering to
+	// call Delete.
+	//
+	// The counters are the inverse: rebuilt per scrape they would reset to
+	// zero on every scrape, and rate() over them would be a flat line at
+	// zero forever.
 	scrapes      prometheus.Counter
 	scrapeErrors *prometheus.CounterVec
-
-	// Table gauges, held between scrapes.
-	tableDeadRows     *prometheus.GaugeVec
-	tableLiveRows     *prometheus.GaugeVec
-	tableSizeBytes    *prometheus.GaugeVec
-	tableVacThreshold *prometheus.GaugeVec
-	tableLastAutovac  *prometheus.GaugeVec
-	tableAutovacs     *prometheus.GaugeVec
 }
 
 // New builds an exporter. It registers nothing: the caller owns the registry,
@@ -101,12 +103,6 @@ func New(cfg Config) *Exporter {
 			Name:      "scrape_errors_total",
 			Help:      "Failed scrapes per collector since the process started. Present at zero from the first scrape, so an increase() over a window that starts before the first failure has a baseline to compare against.",
 		}, []string{"collector"}),
-		tableDeadRows:     tableGauge("dead_rows", newDescs().tableDeadRows),
-		tableLiveRows:     tableGauge("live_rows", newDescs().tableLiveRows),
-		tableSizeBytes:    tableGauge("size_bytes", newDescs().tableSizeBytes),
-		tableVacThreshold: tableGauge("autovacuum_threshold_rows", newDescs().tableVacThreshold),
-		tableLastAutovac:  tableGauge("last_autovacuum_timestamp_seconds", newDescs().tableLastAutovac),
-		tableAutovacs:     tableGauge("autovacuums_total", newDescs().tableAutovacsTotal),
 	}
 
 	// Create every collector's error counter at zero. A counter that only
@@ -117,15 +113,6 @@ func New(cfg Config) *Exporter {
 	}
 
 	return e
-}
-
-func tableGauge(metric string, d *prometheus.Desc) *prometheus.GaugeVec {
-	return prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Namespace: Namespace,
-		Subsystem: "table",
-		Name:      metric,
-		Help:      helpOf(d),
-	}, []string{"schema", "table"})
 }
 
 // Describe implements prometheus.Collector.
@@ -278,21 +265,21 @@ func (e *Exporter) collectBloat(ctx context.Context, ch chan<- prometheus.Metric
 	}
 
 	for _, t := range bloat.Tables {
-		e.tableDeadRows.WithLabelValues(t.Schema, t.Name).Set(t.DeadRows)
-		e.tableLiveRows.WithLabelValues(t.Schema, t.Name).Set(t.LiveRows)
-		e.tableSizeBytes.WithLabelValues(t.Schema, t.Name).Set(t.SizeBytes)
-		e.tableVacThreshold.WithLabelValues(t.Schema, t.Name).Set(t.AutovacuumThresholdRows)
-		e.tableAutovacs.WithLabelValues(t.Schema, t.Name).Set(t.Autovacuums)
+		ch <- prometheus.MustNewConstMetric(e.d.tableDeadRows, prometheus.GaugeValue, t.DeadRows, t.Schema, t.Name)
+		ch <- prometheus.MustNewConstMetric(e.d.tableLiveRows, prometheus.GaugeValue, t.LiveRows, t.Schema, t.Name)
+		ch <- prometheus.MustNewConstMetric(e.d.tableSizeBytes, prometheus.GaugeValue, t.SizeBytes, t.Schema, t.Name)
+		ch <- prometheus.MustNewConstMetric(e.d.tableVacThreshold, prometheus.GaugeValue, t.AutovacuumThresholdRows, t.Schema, t.Name)
+
+		// autovacuum_count only goes up, apart from a statistics reset,
+		// which is what a counter means. Typed as a gauge the exposition
+		// says gauge, and rate() over a gauge is not rejected, it is
+		// quietly wrong across a reset.
+		ch <- prometheus.MustNewConstMetric(e.d.tableAutovacsTotal, prometheus.CounterValue, t.Autovacuums, t.Schema, t.Name)
+
 		if t.LastAutovacuum != nil {
-			e.tableLastAutovac.WithLabelValues(t.Schema, t.Name).Set(float64(t.LastAutovacuum.Unix()))
+			ch <- prometheus.MustNewConstMetric(e.d.tableLastAutovac, prometheus.GaugeValue, float64(t.LastAutovacuum.Unix()), t.Schema, t.Name)
 		}
 	}
-	e.tableDeadRows.Collect(ch)
-	e.tableLiveRows.Collect(ch)
-	e.tableSizeBytes.Collect(ch)
-	e.tableVacThreshold.Collect(ch)
-	e.tableLastAutovac.Collect(ch)
-	e.tableAutovacs.Collect(ch)
 
 	ch <- prometheus.MustNewConstMetric(e.d.tableOmitted, prometheus.GaugeValue, bloat.Omitted())
 }

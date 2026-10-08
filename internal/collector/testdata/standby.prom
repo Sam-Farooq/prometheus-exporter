@@ -40,7 +40,7 @@ pg_replication_standbys_folded 0
 # TYPE pg_table_autovacuum_threshold_rows gauge
 pg_table_autovacuum_threshold_rows{schema="public",table="cache_entries"} 100050
 # HELP pg_table_autovacuums_total Autovacuums of this table since the last statistics reset. A rate of zero on a table above its threshold means autovacuum is not reaching it.
-# TYPE pg_table_autovacuums_total gauge
+# TYPE pg_table_autovacuums_total counter
 pg_table_autovacuums_total{schema="public",table="cache_entries"} 5
 # HELP pg_table_dead_rows Dead rows the statistics collector believes this table holds. An estimate, not a count, and zero immediately after a statistics reset on a table that is full of them.
 # TYPE pg_table_dead_rows gauge

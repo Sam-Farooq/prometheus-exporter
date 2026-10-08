@@ -57,7 +57,7 @@ pg_replication_standbys_folded 1
 pg_table_autovacuum_threshold_rows{schema="public",table="events"} 1.900005e+07
 pg_table_autovacuum_threshold_rows{schema="public",table="sessions"} 400050
 # HELP pg_table_autovacuums_total Autovacuums of this table since the last statistics reset. A rate of zero on a table above its threshold means autovacuum is not reaching it.
-# TYPE pg_table_autovacuums_total gauge
+# TYPE pg_table_autovacuums_total counter
 pg_table_autovacuums_total{schema="public",table="events"} 0
 pg_table_autovacuums_total{schema="public",table="sessions"} 2
 # HELP pg_table_dead_rows Dead rows the statistics collector believes this table holds. An estimate, not a count, and zero immediately after a statistics reset on a table that is full of them.
