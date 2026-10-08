@@ -1,7 +1,12 @@
 # build output
+#
+# The binary is called pgexporter and so is the package directory that
+# produces it. An unanchored "pgexporter" matches both, at any depth, so these
+# are anchored to the repo root. Without the slash, cmd/pgexporter/ is excluded
+# and the module does not build from a fresh clone.
 /bin/
 /dist/
-pgexporter
+/pgexporter
 *.test
 
 # go tooling caches and coverage
